@@ -1,8 +1,7 @@
-use std::fs;
-
 use std::net::{TcpListener, TcpStream};
 
-use rust_simple_webserver::http::{HttpMethod, HttpStatus, parse_http_method, read_buffer, write_content};
+use rust_simple_webserver::http::{HttpMethod, ROUTES, default_not_found, extract_path, parse_http_method, read_buffer};
+
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
@@ -14,11 +13,19 @@ fn main() {
 }
 
 fn handle_connection(mut stream: TcpStream) {
-
 	let buffer = read_buffer(&mut stream);
 
 	if let HttpMethod::GET = parse_http_method(&buffer) {
-		let content = fs::read_to_string("view/hello.html").unwrap();
-		write_content(stream, &content, HttpStatus::Ok);
+		let path = if let Ok(path) = extract_path(&buffer) {
+			path
+		} else {
+			"/404".to_string()
+		};
+
+		if let Some(ex) = ROUTES.lock().unwrap().get(&path) {
+			ex(stream);
+		} else {
+			default_not_found(stream);
+		}
 	}
 }
