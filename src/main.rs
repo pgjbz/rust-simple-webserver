@@ -19,6 +19,6 @@ fn handle_connection(mut stream: TcpStream) {
 
 	if let HttpMethod::GET = parse_http_method(&buffer) {
 		let content = fs::read_to_string("view/hello.html").unwrap();
-		write_content(stream, &content, HttpStatus::OK);
+		write_content(stream, &content, HttpStatus::Ok);
 	}
 }

@@ -1,6 +1,3 @@
-use core::fmt;
-// extern crate strum;
-// extern crate strum_macros,EnumString;
 use std::net::TcpStream;
 use std::io::prelude::*; // into scope to get access to certain traits 
 
@@ -12,15 +9,19 @@ pub enum HttpMethod {
 }
 
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub enum HttpStatus {
-	OK = 200,
+	Ok = 200,
+	NotFound = 404
 }
 
-impl fmt::Display for HttpStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
+impl HttpStatus {
+	pub fn to_string(&self) -> String {
+		match self {
+			HttpStatus::Ok => String::from("OK"),
+			HttpStatus::NotFound => String::from("NOT FOUND")
+		}
+	}
 }
 
 
@@ -35,8 +36,8 @@ pub fn parse_http_method(buffer: &[u8]) -> HttpMethod {
 pub fn write_content(mut stream: TcpStream, content: &str, status: HttpStatus) {
 								//HTTP-Version Status-Code Reason-Phrase CRLF
 	let response = format!("HTTP/1.1 {} {}\r\nContent-Length: {}\r\n\r\n{}", 
-		status.clone() as u32, 
-		status,
+		status as u32, 
+		status.to_string(),
 		content.len(), 
 		content);
 
