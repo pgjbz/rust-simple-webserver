@@ -1,8 +1,9 @@
 use std::collections::HashMap;
-use std::fs;
+use std::{fs, thread};
 use std::net::TcpStream;
 use std::io::prelude::*;
 use std::sync::Mutex;
+use std::time::Duration;
 
 const GET_INIT:  &'static [u8] = b"GET";
 
@@ -55,11 +56,6 @@ pub fn get_request(stream: &mut TcpStream) -> Box<Request> {
 	Box::new(Request::new(method, path, stream))
 }
 
-fn root_exec(request: &mut Request) {
-	let content = load_file_to_string("view/hello.html");
-	write_content(request, &content, HttpStatus::Ok);
-}
-
 pub fn default_not_found(request: &mut Request) {
 	let content = load_file_to_string("view/404.html");
 	write_content(request, &content, HttpStatus::NotFound);
@@ -78,8 +74,20 @@ lazy_static! {
     pub static ref ROUTES: Mutex<Routes> = {
         let mut routes = Routes::new();
 		routes.insert(String::from("/"), root_exec);
+		routes.insert(String::from("/sleep"), sleep);
         Mutex::new(routes)
     };    
+}
+
+fn root_exec(request: &mut Request) {
+	let content = load_file_to_string("view/hello.html");
+	write_content(request, &content, HttpStatus::Ok);
+}
+
+fn sleep(request: &mut Request) {
+	thread::sleep(Duration::from_secs(5));
+	let content = load_file_to_string("view/sleep.html");
+	write_content(request, &content, HttpStatus::Ok);
 }
 
 pub fn parse_http_method(buffer: &[u8]) -> HttpMethod {
