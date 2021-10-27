@@ -56,13 +56,22 @@ pub fn get_request(stream: &mut TcpStream) -> Box<Request> {
 }
 
 fn root_exec(request: &mut Request) {
-	let content = fs::read_to_string("view/hello.html").unwrap();
+	let content = load_file_to_string("view/hello.html");
 	write_content(request, &content, HttpStatus::Ok);
 }
 
 pub fn default_not_found(request: &mut Request) {
-	let content = fs::read_to_string("view/404.html").unwrap();
+	let content = load_file_to_string("view/404.html");
 	write_content(request, &content, HttpStatus::NotFound);
+}
+
+
+fn load_file_to_string(path: &str) -> String {
+	if let Ok(content) = fs::read_to_string(path) {
+		String::from(content)
+	} else {
+		"error".to_string()
+	}
 }
 
 lazy_static! {
