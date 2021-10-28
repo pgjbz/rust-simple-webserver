@@ -91,7 +91,7 @@ impl Worker {
             }
         });
         Self {
-            id: id,
+            id,
             thread: Some(thread),
         }
     }

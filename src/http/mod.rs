@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{fs, thread};
 
-const GET_INIT: &'static [u8] = b"GET";
+const GET_INIT: &[u8] = b"GET";
 
 pub type Routes = HashMap<String, fn(&mut Request)>;
 
@@ -63,7 +63,7 @@ pub fn default_not_found(request: &mut Request) {
 
 fn load_file_to_string(path: &str) -> String {
     if let Ok(content) = fs::read_to_string(path) {
-        String::from(content)
+        content
     } else {
         "error".to_string()
     }
@@ -108,7 +108,7 @@ fn write_content(request: &mut Request, content: &str, status: HttpStatus) {
     );
 
     let stream = &mut request.stream.lock().unwrap();
-    stream.write(response.as_bytes()).unwrap();
+    stream.write_all(response.as_bytes()).unwrap();
     stream.flush().unwrap();
 }
 
@@ -121,8 +121,8 @@ fn read_buffer(stream: Arc<Mutex<TcpStream>>) -> [u8; 1024] {
 
 fn extract_path(buffer: &[u8]) -> Result<String, ()> {
     let str = String::from_utf8_lossy(buffer);
-    let str_slipt = str.split_whitespace();
-    if let Some(val) = str_slipt.skip(1).next() {
+    let mut str_slipt = str.split_whitespace();
+    if let Some(val) = str_slipt.nth(1) {
         Ok(String::from(val))
     } else {
         Err(())
