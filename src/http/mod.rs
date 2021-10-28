@@ -2,21 +2,21 @@ use std::collections::HashMap;
 use std::{fs, thread};
 use std::net::TcpStream;
 use std::io::prelude::*;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 const GET_INIT:  &'static [u8] = b"GET";
 
 pub type Routes = HashMap::<String, fn(&mut Request)>;
 
-pub struct Request<'a> {
-	stream: &'a mut TcpStream,
+pub struct Request {
+	stream: Arc<Mutex<TcpStream>>,
 	pub path: String,
 	pub method: HttpMethod
 }
 
-impl<'a> Request<'a> {
-	pub fn new(method: HttpMethod, path: String, stream: &'a mut TcpStream) -> Self {
+impl Request {
+	pub fn new(method: HttpMethod, path: String, stream: Arc<Mutex<TcpStream>>) -> Self {
 		Self {
 			stream,
 			path, 
@@ -45,8 +45,8 @@ impl HttpStatus {
 	}
 }
 
-pub fn get_request(stream: &mut TcpStream) -> Box<Request> {
-	let buffer = read_buffer(stream); 
+pub fn get_request(stream: Arc<Mutex<TcpStream>>) -> Box<Request> {
+	let buffer = read_buffer(Arc::clone(&stream));
 	let method = parse_http_method(&buffer);
 	let path = if let Ok(path) = extract_path(&buffer) {
 		path
@@ -71,11 +71,11 @@ fn load_file_to_string(path: &str) -> String {
 }
 
 lazy_static! {
-    pub static ref ROUTES: Mutex<Routes> = {
+    pub static ref GETS: Routes = {
         let mut routes = Routes::new();
 		routes.insert(String::from("/"), root_exec);
 		routes.insert(String::from("/sleep"), sleep);
-        Mutex::new(routes)
+        routes
     };    
 }
 
@@ -106,13 +106,15 @@ fn write_content(request: &mut Request, content: &str, status: HttpStatus) {
 		content.len(), 
 		content);
 
-	request.stream.write(response.as_bytes()).unwrap();
-	request.stream.flush().unwrap();
+	let stream = &mut request.stream.lock().unwrap();
+	stream.write(response.as_bytes()).unwrap();
+	stream.flush().unwrap();
 	
 }	
 
-fn read_buffer(stream: &mut TcpStream) -> [u8; 1024] {
-	let mut buffer = [0; 1024];
+fn read_buffer(stream: Arc<Mutex<TcpStream>>) -> [u8; 1024] {
+	let mut buffer = [0u8; 1024];
+	let stream = &mut stream.lock().unwrap();
 	stream.read(&mut buffer).unwrap();
 	buffer
 }
